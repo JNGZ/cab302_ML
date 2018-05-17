@@ -9,6 +9,17 @@ required tasks
 and repeat your experiments.
 """
 
+"""
+Helpful resources
+
+http://scikit-learn.org/stable/tutorial/basic/tutorial.html
+
+loading datasets: http://scikit-learn.org/stable/datasets/index.html
+"""
+
+import csv
+import numpy as np
+
 
 def my_team():
     """
@@ -16,7 +27,6 @@ def my_team():
     of triplet of the form (student_number, first_name, last_name)
     """
     return [(9821112, 'Jonathan', 'Gonzalez'), (8850224, 'Rachel', 'Lynch')]
-    # raise NotImplementedError()
 
 
 def prepare_dataset(dataset_path):
@@ -35,6 +45,27 @@ def prepare_dataset(dataset_path):
 
     @return: X,y
     """
+
+    # https://docs.python.org/2.3/whatsnew/node14.html
+    # - how to read data file in
+    input = open('/Users/JNGZ/PycharmProjects/cab302_ML/medical_records.data'
+                 ,'rt')
+    reader = csv.reader(input)
+
+    # create empty python array
+    array = []
+
+    # iterate reader and append each line from the data set to the empty
+    # python array
+    for line in reader:
+        array.append(line)
+
+
+    X = np.array(array)
+    # Create empty numpy array 1 dimension array
+    dataset = np.array([1])
+
+
 
     raise NotImplementedError()
 
