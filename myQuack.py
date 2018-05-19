@@ -45,14 +45,16 @@ def prepare_dataset(dataset_path):
 
     @return: X,y
     """
-
     # https://docs.python.org/2.3/whatsnew/node14.html
     # - how to read data file in
-    input = open('/Users/JNGZ/PycharmProjects/cab302_ML/medical_records.data'
-                 ,'rt')
+#    input = open('/Users/JNGZ/PycharmProjects/cab302_ML/medical_records.data'
+#                 ,'rt')
+    input = open(dataset_path, 'rt')    # input param is dataset_path
     reader = csv.reader(input)
+    tumor_index = 1  # index where rating 'M' or 'B' is located in the data row
+    
 
-    # create empty python array
+    # Create empty python helper array to build X
     array = []
 
     # iterate reader and append each line from the data set to the empty
@@ -60,14 +62,25 @@ def prepare_dataset(dataset_path):
     for line in reader:
         array.append(line)
 
+    X = np.array(array)  
+    
+    # Empty the helper array to build y
+    array = []
+    
+    # for each row in X, get the value of index 1 and assign it 0 for 'B' and '1' for M
+    for i in range(X.shape[0]):
+        tumor_rating = X[i][tumor_index]
+        if tumor_rating == 'B':
+            tumor_rating = 0
+        elif tumor_rating == 'M':
+            tumor_rating = 1
+        else:
+            tumor_rating = "Invalid Rating"
+        array.append(tumor_rating)
+        
+    y = np.array(array)
 
-    X = np.array(array)
-    # Create empty numpy array 1 dimension array
-    dataset = np.array([1])
-
-
-
-    raise NotImplementedError()
+    return X, y
 
 
 def build_NB_classifier(X_training, y_training):
@@ -135,3 +148,5 @@ def build_SVM_classifier(X_training, y_training):
 if __name__ == "__main__":
     pass
     # call your functions here
+    
+    prepare_dataset('medical_records.data') # Since medical_records.data is in the same directory as myQuack.py, we can reference it directly
