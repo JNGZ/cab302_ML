@@ -19,6 +19,7 @@ loading datasets: http://scikit-learn.org/stable/datasets/index.html
 
 import csv
 import numpy as np
+import sklearn
 
 
 def my_team():
@@ -67,18 +68,18 @@ def prepare_dataset(dataset_path):
     # Empty the helper array to build y
     array = []
     
-    # for each row in X, get the value of index 1 and assign it 0 for 'B' and '1' for M
+    # for each row in X, get the value of in tumor_index, which is the tumor rating
     for i in range(X.shape[0]):
         tumor_rating = X[i][tumor_index]
-        if tumor_rating == 'B':
-            tumor_rating = 0
-        elif tumor_rating == 'M':
-            tumor_rating = 1
-        else:
-            tumor_rating = "Invalid Rating"
         array.append(tumor_rating)
-        
+    
     y = np.array(array)
+    
+    # Use numpy array built-in indexing to convert 'B' and 'M' to 1 and 0 (see first ML lecture slides)
+    y[y == 'M'] = 1
+    y[y == 'B'] = 0
+    y = y.astype(np.int) # converts ['1','1','0'...] to [1,1,0]
+    
 
     return X, y
 
@@ -94,6 +95,8 @@ def build_NB_classifier(X_training, y_training):
 
     @return clf : the classifier built in this function
     """
+    model = sklearn.naive_bayes.GaussianNB()    # GaussianNB used in classification 
+
 
     raise NotImplementedError()
 
@@ -149,4 +152,7 @@ if __name__ == "__main__":
     pass
     # call your functions here
     
-    prepare_dataset('medical_records.data') # Since medical_records.data is in the same directory as myQuack.py, we can reference it directly
+    X, y = prepare_dataset('medical_records.data') # Since medical_records.data is in the same directory as myQuack.py, we can reference it directly
+
+
+
