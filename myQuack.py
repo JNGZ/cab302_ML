@@ -19,7 +19,7 @@ loading datasets: http://scikit-learn.org/stable/datasets/index.html
 
 import csv
 import numpy as np
-import sklearn
+from sklearn import naive_bayes
 
 
 def my_team():
@@ -52,35 +52,37 @@ def prepare_dataset(dataset_path):
 #                 ,'rt')
     input = open(dataset_path, 'rt')    # input param is dataset_path
     reader = csv.reader(input)
-    tumor_index = 1  # index where rating 'M' or 'B' is located in the data row
-    
-
-    # Create empty python helper array to build X
-    array = []
+    tumor_index = 1  # index where classification 'M' or 'B' is located in the data row
+    array = []  # Create empty python helper array to build X
 
     # iterate reader and append each line from the data set to the empty
     # python array
     for line in reader:
         array.append(line)
 
-    X = np.array(array)  
+    dataset_array = np.array(array)
+
+    # Generate X from the data set by excluding patent ID and tumor classification  
+    X = dataset_array[:, 2:]    
     
-    # Empty the helper array to build y
-    array = []
-    
-    # for each row in X, get the value of in tumor_index, which is the tumor rating
-    for i in range(X.shape[0]):
-        tumor_rating = X[i][tumor_index]
-        array.append(tumor_rating)
+    array = []  # Empty the helper array to build y
+    # for each row in X, get the value in tumor_index, which is the tumor classification
+    for i in range(dataset_array.shape[0]):
+        tumor_cl = dataset_array[i][tumor_index]
+        array.append(tumor_cl)
     
     y = np.array(array)
     
     # Use numpy array built-in indexing to convert 'B' and 'M' to 1 and 0 (see first ML lecture slides)
     y[y == 'M'] = 1
     y[y == 'B'] = 0
-    y = y.astype(np.int) # converts ['1','1','0'...] to [1,1,0]
     
+    # convert char arrays into  arrays i.e. ['1','1','0'...] to [1,1,0]
+    X = X.astype(np.float)
+    y = y.astype(np.int) 
 
+    print(X[0][0])    
+    
     return X, y
 
 
@@ -153,6 +155,6 @@ if __name__ == "__main__":
     # call your functions here
     
     X, y = prepare_dataset('medical_records.data') # Since medical_records.data is in the same directory as myQuack.py, we can reference it directly
-
+    print(X)
 
 
