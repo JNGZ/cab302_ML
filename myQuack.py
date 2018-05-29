@@ -20,6 +20,8 @@ loading datasets: http://scikit-learn.org/stable/datasets/index.html
 import csv
 import numpy as np
 from sklearn import naive_bayes
+from sklearn.cross_validation import train_test_split
+
 
 
 def my_team():
@@ -53,8 +55,8 @@ def prepare_dataset(dataset_path):
     input = open(dataset_path, 'rt')    # input param is dataset_path
     reader = csv.reader(input)
     tumor_index = 1  # index where classification 'M' or 'B' is located in the data row
-    array = []  # Create empty python helper array to build X
-
+    array = []
+    
     # iterate reader and append each line from the data set to the empty
     # python array
     for line in reader:
@@ -80,8 +82,6 @@ def prepare_dataset(dataset_path):
     # convert char arrays into  arrays i.e. ['1','1','0'...] to [1,1,0]
     X = X.astype(np.float)
     y = y.astype(np.int) 
-
-    print(X[0][0])    
     
     return X, y
 
@@ -97,8 +97,11 @@ def build_NB_classifier(X_training, y_training):
 
     @return clf : the classifier built in this function
     """
-    model = sklearn.naive_bayes.GaussianNB()    # GaussianNB used in classification 
+    model = naive_bayes.GaussianNB()    # GaussianNB used in classification 
 
+    model.fit(X_training, y_training)
+    
+    print(model)
 
     raise NotImplementedError()
 
@@ -151,10 +154,14 @@ def build_SVM_classifier(X_training, y_training):
 
 
 if __name__ == "__main__":
-    pass
-    # call your functions here
+    ts = 0.33   # this represents the proportion of data to include in the test split, lecture references 1/3 of data 
     
+    print(my_team())
     X, y = prepare_dataset('medical_records.data') # Since medical_records.data is in the same directory as myQuack.py, we can reference it directly
-    print(X)
+    
+    # Generate train test statistics
+    # see: Naive Bayes Classifier - https://www.youtube.com/watch?v=99MN-rl8jGY
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = ts)
 
+    build_NB_classifier(X_train, y_train)
 
