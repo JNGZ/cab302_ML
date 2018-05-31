@@ -18,11 +18,23 @@ loading datasets: http://scikit-learn.org/stable/datasets/index.html
 """
 
 import csv
+import math
+import io
 import numpy as np
-from sklearn import naive_bayes
-from sklearn.cross_validation import train_test_split
+import pandas as pd
+import pydotplus
 
+import matplotlib.pyplot as plt
 
+from sklearn import *
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import export_graphviz
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import *
+from sklearn.model_selection import cross_val_score
+
+import imageio
 
 def my_team():
     """
@@ -52,11 +64,16 @@ def prepare_dataset(dataset_path):
     # - how to read data file in
 #    input = open('/Users/JNGZ/PycharmProjects/cab302_ML/medical_records.data'
 #                 ,'rt')
+
+    data = pd.read_csv('medical_records.data',names=['ID','Diagnosis','Radius', 'Texture','Perimeter','Area', 'Smoothness', 'Compactness', 'Concavity','Concave Points', 'Symmetry', 'Fractal Dimension'])
+    data.describe()
+
+
     input = open(dataset_path, 'rt')    # input param is dataset_path
     reader = csv.reader(input)
     tumor_index = 1  # index where classification 'M' or 'B' is located in the data row
     array = []
-    
+
     # iterate reader and append each line from the data set to the empty
     # python array
     for line in reader:
@@ -64,25 +81,31 @@ def prepare_dataset(dataset_path):
 
     dataset_array = np.array(array)
 
-    # Generate X from the data set by excluding patent ID and tumor classification  
-    X = dataset_array[:, 2:]    
-    
+    # Generate X from the data set by excluding patent ID
+    # and tumor classification
+    X = dataset_array[:, 2:]
+
     array = []  # Empty the helper array to build y
-    # for each row in X, get the value in tumor_index, which is the tumor classification
+
+    # for each row in X, get the value in tumor_index,
+    # which is the tumor classification
     for i in range(dataset_array.shape[0]):
         tumor_cl = dataset_array[i][tumor_index]
         array.append(tumor_cl)
-    
+
     y = np.array(array)
-    
-    # Use numpy array built-in indexing to convert 'B' and 'M' to 1 and 0 (see first ML lecture slides)
+
+    # Use numpy array built-in indexing to convert 'B' and 'M' to 1 and 0
+    # (see first ML lecture slides)
     y[y == 'M'] = 1
     y[y == 'B'] = 0
-    
+
     # convert char arrays into  arrays i.e. ['1','1','0'...] to [1,1,0]
     X = X.astype(np.float)
-    y = y.astype(np.int) 
-    
+    y = y.astype(np.int)
+
+    print(len(X))
+    print(len(y))
     return X, y
 
 
@@ -106,7 +129,7 @@ def build_NB_classifier(X_training, y_training):
     raise NotImplementedError()
 
 
-def build_DT_classifier(X_training, y_training):
+def build_DT_classifier(X, y):
     """
     Build a Decision Tree classifier based on the training set X_training,
     y_training.
@@ -118,7 +141,47 @@ def build_DT_classifier(X_training, y_training):
     @return clf : the classifier built in this function
     """
 
-    raise NotImplementedError()
+    # ------------   C R O S S    V A L I D A T I O N
+    # Hyper parameter range 2 - 100
+    min_split_range = list(range(2,500))
+
+    # List of cross validation scores
+    split_scores = []
+
+    # Loop through the hyper parameter range and apply the parameter value to
+    # the decision tree classifier
+    # then use the cross_vale_score function to split the data into 10 folds
+    # for cross validation
+    # then return the accuracy score for the 10 fold validation
+    # finally, append the mean of the 10 scores to the split_scores list
+    for split in (min_split_range):
+        test_tree = DecisionTreeClassifier(min_samples_split=split)
+        scores = cross_val_score(test_tree, X, y, cv=10, scoring='accuracy')
+        split_scores.append(scores.mean())
+    print(split_scores)
+
+    # ------------------------ Get standard deviation of validation accuracy
+    numpy_scores = np.array(split_scores)
+    val_acc_std_dev = numpy_scores.std()
+    print('numpy standard', val_acc_std_dev)
+
+    # -----------------Create a plot to visualize the hyper parameter performance
+    plt.plot(min_split_range, split_scores)
+    plt.xlabel('Split Value for DTree')
+    plt.ylabel('Cross Validation Accuracy')
+    plt.grid(b=True)
+    plt.show()
+
+    #--------------
+    # d_tree = DecisionTreeClassifier(min_samples_split=190)
+    # scores = cross_val_score(d_tree, X, y, cv=10, scoring='accuracy')
+    # print(scores)
+    # print(scores.mean())
+
+    # Instantiate decision tree classifier with min_samples_split hyper parameter
+    cls = DecisionTreeClassifier(min_samples_split=190)
+
+    return cls
 
 
 def build_NN_classifier(X_training, y_training):
@@ -153,15 +216,61 @@ def build_SVM_classifier(X_training, y_training):
     raise NotImplementedError()
 
 
+def visualize_tree(dt, path):
+
+    f = io.StringIO()
+
+    export_graphviz(dt, out_file=f)
+
+    pydotplus.graph_from_dot_data(f.getvalue()).write_png(path)
+
+    image = imageio.imread(path)
+
+    return image
+
 if __name__ == "__main__":
-    ts = 0.33   # this represents the proportion of data to include in the test split, lecture references 1/3 of data 
     
     print(my_team())
+
+    # Prepare and format the raw data
     X, y = prepare_dataset('medical_records.data') # Since medical_records.data is in the same directory as myQuack.py, we can reference it directly
-    
-    # Generate train test statistics
-    # see: Naive Bayes Classifier - https://www.youtube.com/watch?v=99MN-rl8jGY
+
+    # Test size 33 %
+    ts = .33
+
+    # Split the data into Test and Training Sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = ts)
 
-    build_NB_classifier(X_train, y_train)
+    # instantiate the decision tree classifier
+    dt_classifier = build_DT_classifier(X, y)
+    # Training the classifier
+    dt = dt_classifier.fit(X_train, y_train)
+    # Visualize the decision tree
+    visualize_tree(dt, 'dt.png')
+
+    # Decision tree cross validation score
+    validation_scores = cross_val_score(dt, X, y, cv=10, scoring='accuracy')
+    val_score_mean = validation_scores.mean()
+    print('Validation accuracy: ', val_score_mean)
+
+    # Decision tree prediction on training set
+    dt_pred = dt.predict(X_train)
+    # Accuracy score for prediction
+    prediction_score = accuracy_score(y_train, dt_pred) * 100
+    print('Training accuracy: ', prediction_score, "%")
+
+    # Decision tree prediction on test set
+    dt_pred = dt.predict(X_test)
+    # Accuracy score for prediction
+    prediction_score = accuracy_score(y_test, dt_pred) * 100
+    print('Test accuracy: ', prediction_score, "%")
+
+
+
+    # crosValScore = cross_val_score(dt, X_test, y_test, cv=4)
+    # print("Cross Val Score: ", crosValScore)
+    # print("Scores mean: ",score.mean())
+    # print("Accuracy using Decision Tree: ", round(score, 1), "%")
+    # img = show_tree(prediction, "dtp_100.png")
+
 
