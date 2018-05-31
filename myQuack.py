@@ -1,7 +1,6 @@
 import csv
 import io
 import numpy as np
-import pandas as pd
 import pydotplus
 import imageio
 import matplotlib.pyplot as plt
@@ -58,18 +57,11 @@ def prepare_dataset(dataset_path):
 
     @return: X,y
     """
-    # https://docs.python.org/2.3/whatsnew/node14.html
-    # - how to read data file in
-#    input = open('/Users/JNGZ/PycharmProjects/cab302_ML/medical_records.data'
-#                 ,'rt')
 
-    data = pd.read_csv('medical_records.data',names=['ID','Diagnosis','Radius', 'Texture','Perimeter','Area', 'Smoothness', 'Compactness', 'Concavity','Concave Points', 'Symmetry', 'Fractal Dimension'])
-    data.describe()
-
-
-    input = open(dataset_path, 'rt')    # input param is dataset_path
-    reader = csv.reader(input)
-    tumor_index = 1  # index where classification 'M' or 'B' is located in the data row
+    data_input = open(dataset_path, 'rt')
+    reader = csv.reader(data_input)
+    # index where classification 'M' or 'B' is located in the data row
+    tumor_index = 1
     array = []
 
     # iterate reader and append each line from the data set to the empty
@@ -102,8 +94,6 @@ def prepare_dataset(dataset_path):
     X = X.astype(np.float)
     y = y.astype(np.int)
 
-    print(len(X))
-    print(len(y))
     return X, y
 
 
@@ -118,10 +108,10 @@ def build_NB_classifier(X_training, y_training):
 
     @return clf : the classifier built in this function
     """
-    model = naive_bayes.GaussianNB()    # GaussianNB used in classification 
+    model = naive_bayes.GaussianNB()    # GaussianNB used in classification
 
     model.fit(X_training, y_training)
-    
+
     print(model)
 
     raise NotImplementedError()
@@ -156,11 +146,6 @@ def build_DT_classifier(X, y):
         test_tree = DecisionTreeClassifier(min_samples_split=split)
         scores = cross_val_score(test_tree, X, y, cv=10, scoring='accuracy')
         split_scores.append(scores.mean())
-
-    # Get standard deviation of validation accuracy
-    numpy_scores = np.array(split_scores)
-    val_acc_std_dev = numpy_scores.std()
-    print('Standard deviation', val_acc_std_dev)
 
     # Create a plot to visualize the hyper parameter performance
     plt.plot(min_split_range, split_scores)
@@ -245,17 +230,22 @@ if __name__ == "__main__":
     val_score_mean = validation_scores.mean()
     print('Validation accuracy: ', val_score_mean)
 
+    # Get standard deviation of validation accuracy
+    numpy_scores = np.array(validation_scores)
+    val_acc_std_dev = numpy_scores.std()
+    print('Standard deviation of validation using 190 hyper parameter', val_acc_std_dev)
+
     # Decision tree prediction on training set
     dt_pred = dt.predict(X_train)
     # Accuracy score for prediction
-    prediction_score = accuracy_score(y_train, dt_pred) * 100
-    print('Training accuracy: ', prediction_score, "%")
+    prediction_score = accuracy_score(y_train, dt_pred)
+    print('Training accuracy: ', prediction_score)
 
     # Decision tree prediction on test set
     dt_pred = dt.predict(X_test)
     # Accuracy score for prediction
-    prediction_score = accuracy_score(y_test, dt_pred) * 100
-    print('Test accuracy: ', prediction_score, "%")
+    prediction_score = accuracy_score(y_test, dt_pred)
+    print('Test accuracy: ', prediction_score)
 
 
 
