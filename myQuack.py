@@ -1,3 +1,19 @@
+import csv
+import io
+import numpy as np
+import pandas as pd
+import pydotplus
+import imageio
+import matplotlib.pyplot as plt
+
+from sklearn import *
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import export_graphviz
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import *
+from sklearn.model_selection import cross_val_score
+
+
 """
 Scaffolding code for the Machine Learning assignment.
 
@@ -17,24 +33,6 @@ http://scikit-learn.org/stable/tutorial/basic/tutorial.html
 loading datasets: http://scikit-learn.org/stable/datasets/index.html
 """
 
-import csv
-import math
-import io
-import numpy as np
-import pandas as pd
-import pydotplus
-
-import matplotlib.pyplot as plt
-
-from sklearn import *
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.tree import export_graphviz
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import *
-from sklearn.model_selection import cross_val_score
-
-import imageio
 
 def my_team():
     """
@@ -141,7 +139,7 @@ def build_DT_classifier(X, y):
     @return clf : the classifier built in this function
     """
 
-    # ------------   C R O S S    V A L I D A T I O N
+    #  C R O S S    V A L I D A T I O N
     # Hyper parameter range 2 - 100
     min_split_range = list(range(2,500))
 
@@ -158,25 +156,18 @@ def build_DT_classifier(X, y):
         test_tree = DecisionTreeClassifier(min_samples_split=split)
         scores = cross_val_score(test_tree, X, y, cv=10, scoring='accuracy')
         split_scores.append(scores.mean())
-    print(split_scores)
 
-    # ------------------------ Get standard deviation of validation accuracy
+    # Get standard deviation of validation accuracy
     numpy_scores = np.array(split_scores)
     val_acc_std_dev = numpy_scores.std()
-    print('numpy standard', val_acc_std_dev)
+    print('Standard deviation', val_acc_std_dev)
 
-    # -----------------Create a plot to visualize the hyper parameter performance
+    # Create a plot to visualize the hyper parameter performance
     plt.plot(min_split_range, split_scores)
     plt.xlabel('Split Value for DTree')
     plt.ylabel('Cross Validation Accuracy')
     plt.grid(b=True)
     plt.show()
-
-    #--------------
-    # d_tree = DecisionTreeClassifier(min_samples_split=190)
-    # scores = cross_val_score(d_tree, X, y, cv=10, scoring='accuracy')
-    # print(scores)
-    # print(scores.mean())
 
     # Instantiate decision tree classifier with min_samples_split hyper parameter
     cls = DecisionTreeClassifier(min_samples_split=190)
@@ -228,12 +219,13 @@ def visualize_tree(dt, path):
 
     return image
 
+
 if __name__ == "__main__":
     
     print(my_team())
 
     # Prepare and format the raw data
-    X, y = prepare_dataset('medical_records.data') # Since medical_records.data is in the same directory as myQuack.py, we can reference it directly
+    X, y = prepare_dataset('medical_records.data')
 
     # Test size 33 %
     ts = .33
@@ -265,12 +257,5 @@ if __name__ == "__main__":
     prediction_score = accuracy_score(y_test, dt_pred) * 100
     print('Test accuracy: ', prediction_score, "%")
 
-
-
-    # crosValScore = cross_val_score(dt, X_test, y_test, cv=4)
-    # print("Cross Val Score: ", crosValScore)
-    # print("Scores mean: ",score.mean())
-    # print("Accuracy using Decision Tree: ", round(score, 1), "%")
-    # img = show_tree(prediction, "dtp_100.png")
 
 
