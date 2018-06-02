@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import operator
 
 from sklearn import *
+from sklearn.naive_bayes import *
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import export_graphviz
@@ -77,7 +78,6 @@ def prepare_dataset(dataset_path):
     # Generate X from the data set by excluding patent ID
     # and tumor classification
     X = dataset_array[:, 2:]
-
     array = []  # Empty the helper array to build y
 
     # for each row in X, get the value in tumor_index,
@@ -86,10 +86,9 @@ def prepare_dataset(dataset_path):
         tumor_cl = dataset_array[i][tumor_index]
         array.append(tumor_cl)
 
-    y = np.array(array)
-
     # Use numpy array built-in indexing to convert 'B' and 'M' to 1 and 0
     # (see first ML lecture slides)
+    y = np.array(array)
     y[y == 'M'] = 1
     y[y == 'B'] = 0
 
@@ -111,13 +110,9 @@ def build_NB_classifier(X_training, y_training):
 
     @return clf : the classifier built in this function
     """
-    model = naive_bayes.GaussianNB()    # GaussianNB used in classification
-
-    model.fit(X_training, y_training)
-
-    print(model)
-
-    raise NotImplementedError()
+    clf = GaussianNB()    # GaussianNB used in classification
+    clf.fit(X_training, y_training)     # Find the best Gaussian fit of the data
+    return clf
 
 
 def build_DT_classifier(X_training, y_training):
@@ -307,7 +302,12 @@ if __name__ == "__main__":
     # prediction_score = accuracy_score(y_test, dt_pred)
     # print('Test accuracy: ', prediction_score)
 
-
+    # Build the naive bayers classifier
+    nb_clf = build_NB_classifier(X_train, y_train)
+    # nb_pred = nb_clf.predict(X_test)
+    # te_acc_score = accuracy_score(y_test, nb_pred)
+    print('Training Accuracy for Naive Bayers:', nb_clf.score(X_train, y_train))
+    print('Test Accuracy for Naive Bayers:', nb_clf.score(X_test, y_test))
 
     # instantiate the neural net classifier with optimal hyper parameter
     nn_classifier = build_NN_classifier(X, y)
