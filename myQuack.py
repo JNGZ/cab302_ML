@@ -120,7 +120,7 @@ def build_NB_classifier(X_training, y_training):
     raise NotImplementedError()
 
 
-def build_DT_classifier(X, y):
+def build_DT_classifier(X_training, y_training):
     """
     Build a Decision Tree classifier based on the training set X_training,
     y_training.
@@ -149,7 +149,7 @@ def build_DT_classifier(X, y):
         test_tree = DecisionTreeClassifier(min_samples_split=split)
         # perform cross validation using 10 k folds and score on base on
         # accuracy
-        scores = cross_val_score(test_tree, X, y, cv=10, scoring='accuracy')
+        scores = cross_val_score(test_tree, X_training, y_training, cv=10, scoring='accuracy')
         # get the mean score from cross val test
         split_scores.append(scores.mean())
         # add the mean split value and mean score to the dictionary
@@ -206,7 +206,7 @@ def build_NN_classifier(X_training, y_training):
     for layer in hidden_layer_range:
         test_nn = MLPClassifier(hidden_layer_sizes=layer)
         # perform cross validation using 10 k folds and score on base on accuracy
-        scores = cross_val_score(test_nn, X, y, cv=10, scoring='accuracy')
+        scores = cross_val_score(test_nn, X_training, y_training, cv=10, scoring='accuracy')
         # get the mean score from cross val test
         split_scores.append(scores.mean())
         # add number of layers and mean score to layer dictionary
@@ -226,11 +226,11 @@ def build_NN_classifier(X_training, y_training):
     # Get max optimal value of hidden layers from the dictionary
     maximum = max(layer_dict, key=layer_dict.get)
 
-    print(maximum, max(split_scores))
-
     # create instance of multi layer perceptron neural net and pass it the
     # optimal hidden layers value
     nn = MLPClassifier(hidden_layer_sizes=maximum)
+
+    print("[Neural Net] Validation set score: %", max(split_scores))
 
     return nn
 
@@ -313,9 +313,9 @@ if __name__ == "__main__":
     nn_classifier = build_NN_classifier(X, y)
     # train the neural net
     nn = nn_classifier.fit(X_train, y_train)
-    print(nn)
-    print("Training set score: %", nn_classifier.score(X_train, y_train))
-    print("Test set score: %", nn_classifier.score(X_test, y_test))
+    # print training and test scores
+    print("[Neural Net] Training set score: %", nn.score(X_train, y_train))
+    print("[Neural Net] Test set score: %", nn.score(X_test, y_test))
 
 
 
