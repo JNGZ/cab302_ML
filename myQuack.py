@@ -36,6 +36,10 @@ http://scikit-learn.org/stable/tutorial/basic/tutorial.html
 loading datasets: http://scikit-learn.org/stable/datasets/index.html
 """
 
+# GLOBAL PRIORS
+global m_prior
+global b_prior
+
 
 def my_team():
     """
@@ -110,7 +114,7 @@ def build_NB_classifier(X_training, y_training):
 
     @return clf : the classifier built in this function
     """
-    clf = GaussianNB()    # GaussianNB used in classification
+    clf = GaussianNB(priors=[b_prior, m_prior])    # GaussianNB used in classification
     clf.fit(X_training, y_training)     # Find the best Gaussian fit of the data
     return clf
 
@@ -266,6 +270,12 @@ if __name__ == "__main__":
 
     # Prepare and format the raw data
     X, y = prepare_dataset('medical_records.data')
+
+    # Calculate the priors from the whole dataset based on the proportion of benign and malignant data
+    num_mal = np.count_nonzero(y == 1)
+    m_prior = num_mal/len(y)
+    b_prior = 1 - m_prior
+    print("Proportion of Malignant data: %.3f Proportion of Benign: %.3f" % (m_prior, b_prior))
 
     # Test size 33 %
     ts = .33
