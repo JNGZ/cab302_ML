@@ -4,14 +4,17 @@ import numpy as np
 import pydotplus
 import imageio
 import matplotlib.pyplot as plt
+import operator
 
 from sklearn import *
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.tree import export_graphviz
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import *
 from sklearn.model_selection import cross_val_score
 
+from sklearn.preprocessing import StandardScaler
 
 """
 Scaffolding code for the Machine Learning assignment.
@@ -130,22 +133,29 @@ def build_DT_classifier(X, y):
     """
 
     #  C R O S S    V A L I D A T I O N
-    # Hyper parameter range 2 - 100
-    min_split_range = list(range(2,500))
+
+    # Hyper parameter range 2 - 500
+    min_split_range = list(range(2, 500))
 
     # List of cross validation scores
     split_scores = []
 
+    # dictionary
+    min_smpl_splt_dict = {}
+
     # Loop through the hyper parameter range and apply the parameter value to
     # the decision tree classifier
-    # then use the cross_vale_score function to split the data into 10 folds
-    # for cross validation
-    # then return the accuracy score for the 10 fold validation
-    # finally, append the mean of the 10 scores to the split_scores list
-    for split in (min_split_range):
+    for split in min_split_range:
         test_tree = DecisionTreeClassifier(min_samples_split=split)
+        # perform cross validation using 10 k folds and score on base on
+        # accuracy
         scores = cross_val_score(test_tree, X, y, cv=10, scoring='accuracy')
+        # get the mean score from cross val test
         split_scores.append(scores.mean())
+        # add the mean split value and mean score to the dictionary
+        min_smpl_splt_dict.update({split:scores.mean()})
+
+    #  P L O T T I N G
 
     # Create a plot to visualize the hyper parameter performance
     plt.plot(min_split_range, split_scores)
@@ -154,8 +164,16 @@ def build_DT_classifier(X, y):
     plt.grid(b=True)
     plt.show()
 
+    # Get the highest accuracy score
+    max_split = max(split_scores)
+    print('Peak accuracy value: ', max_split)
+
+    # Get max value for hidden layers
+    maximum = max(min_smpl_splt_dict, key=min_smpl_splt_dict.get)
+    print('Optimal split value: ', maximum)
+
     # Instantiate decision tree classifier with min_samples_split hyper parameter
-    cls = DecisionTreeClassifier(min_samples_split=190)
+    cls = DecisionTreeClassifier(min_samples_split=maximum)
 
     return cls
 
@@ -173,7 +191,49 @@ def build_NN_classifier(X_training, y_training):
     clf : the classifier built in this function
     """
 
-    raise NotImplementedError()
+    #  H Y P E R   P A R A M E T E R   C R O S S    V A L I D A T I O N
+
+    # list of hyper parameters to test
+    hidden_layer_range = list(range(100,200))
+
+    # List of cross validation scores
+    split_scores = []
+
+    # dictionary
+    layer_dict = {}
+
+    # loop over list of hyper parameters and perform cross validation
+    for layer in hidden_layer_range:
+        test_nn = MLPClassifier(hidden_layer_sizes=layer)
+        # perform cross validation using 10 k folds and score on base on accuracy
+        scores = cross_val_score(test_nn, X, y, cv=10, scoring='accuracy')
+        # get the mean score from cross val test
+        split_scores.append(scores.mean())
+        # add number of layers and mean score to layer dictionary
+        layer_dict.update({layer:scores.mean()})
+
+
+
+    #  P L O T T I N G
+
+    # Create a plot to visualize the hyper parameter performance
+    plt.plot(hidden_layer_range, split_scores)
+    plt.xlabel('Number Of Hidden Layer')
+    plt.ylabel('Cross Validation Accuracy')
+    plt.grid(b=True)
+    plt.show()
+
+    # Get max optimal value of hidden layers from the dictionary
+    maximum = max(layer_dict, key=layer_dict.get)
+
+    print(maximum, max(split_scores))
+
+    # create instance of multi layer perceptron neural net and pass it the
+    # optimal hidden layers value
+    nn = MLPClassifier(hidden_layer_sizes=maximum)
+
+    return nn
+
 
 
 def build_SVM_classifier(X_training, y_training):
@@ -206,7 +266,7 @@ def visualize_tree(dt, path):
 
 
 if __name__ == "__main__":
-    
+
     print(my_team())
 
     # Prepare and format the raw data
@@ -218,34 +278,46 @@ if __name__ == "__main__":
     # Split the data into Test and Training Sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = ts)
 
-    # instantiate the decision tree classifier
-    dt_classifier = build_DT_classifier(X, y)
-    # Training the classifier
-    dt = dt_classifier.fit(X_train, y_train)
-    # Visualize the decision tree
-    visualize_tree(dt, 'dt.png')
+    # # instantiate the decision tree classifier
+    # dt_classifier = build_DT_classifier(X, y)
+    # # Training the classifier
+    # dt = dt_classifier.fit(X_train, y_train)
+    # # Visualize the decision tree
+    # visualize_tree(dt, 'dt.png')
+    #
+    # # Decision tree cross validation accuracy
+    # validation_scores = cross_val_score(dt, X, y, cv=10, scoring='accuracy')
+    # val_score_mean = validation_scores.mean()
+    # print('Validation accuracy: ', val_score_mean)
+    #
+    # # Get standard deviation of validation accuracy
+    # numpy_scores = np.array(validation_scores)
+    # val_acc_std_dev = numpy_scores.std()
+    # print('Standard deviation of validation using 190 hyper parameter', val_acc_std_dev)
+    #
+    # # Decision tree prediction on training set
+    # dt_pred = dt.predict(X_train)
+    # # Accuracy score for prediction
+    # prediction_score = accuracy_score(y_train, dt_pred)
+    # print('Training accuracy: ', prediction_score)
+    #
+    # # Decision tree prediction on test set
+    # dt_pred = dt.predict(X_test)
+    # # Accuracy score for prediction
+    # prediction_score = accuracy_score(y_test, dt_pred)
+    # print('Test accuracy: ', prediction_score)
 
-    # Decision tree cross validation score
-    validation_scores = cross_val_score(dt, X, y, cv=10, scoring='accuracy')
-    val_score_mean = validation_scores.mean()
-    print('Validation accuracy: ', val_score_mean)
 
-    # Get standard deviation of validation accuracy
-    numpy_scores = np.array(validation_scores)
-    val_acc_std_dev = numpy_scores.std()
-    print('Standard deviation of validation using 190 hyper parameter', val_acc_std_dev)
 
-    # Decision tree prediction on training set
-    dt_pred = dt.predict(X_train)
-    # Accuracy score for prediction
-    prediction_score = accuracy_score(y_train, dt_pred)
-    print('Training accuracy: ', prediction_score)
+    # instantiate the neural net classifier with optimal hyper parameter
+    nn_classifier = build_NN_classifier(X, y)
+    # train the neural net
+    nn = nn_classifier.fit(X_train, y_train)
+    print(nn)
+    print("Training set score: %", nn_classifier.score(X_train, y_train))
+    print("Test set score: %", nn_classifier.score(X_test, y_test))
 
-    # Decision tree prediction on test set
-    dt_pred = dt.predict(X_test)
-    # Accuracy score for prediction
-    prediction_score = accuracy_score(y_test, dt_pred)
-    print('Test accuracy: ', prediction_score)
+
 
 
 
