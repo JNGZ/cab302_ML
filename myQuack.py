@@ -12,6 +12,8 @@ from sklearn.svm import SVC
 from sklearn.tree import export_graphviz
 from sklearn.model_selection import *
 from sklearn.model_selection import cross_val_score
+from sklearn import metrics
+
 
 
 """
@@ -97,9 +99,12 @@ def build_NB_classifier(X_training, y_training):
     y_training: y_training[i] is the class label of X_training[i,:]
     @return clf : the classifier built in this function
     """
-    clf = GaussianNB(priors=[b_prior, m_prior])    # GaussianNB used in classification
+    print('B priori', b_prior)
+    print('M priori', m_prior)
+    clf = GaussianNB(priors=[b_prior, m_prior])   # GaussianNB used in classification
     clf.fit(X_training, y_training)     # Find the best Gaussian fit of the data
     return clf
+
 
 def build_DT_classifier(X_training, y_training):
     """
@@ -152,7 +157,8 @@ def build_DT_classifier(X_training, y_training):
     # print the standard deviation of validation score
     numpy_scores = np.array(split_scores)
     val_acc_std_dev = numpy_scores.std()
-    print('[Decision Tree] - Standard deviation of Validation Scores: ', val_acc_std_dev)
+    print("Standard Deviation: ", numpy_scores.std())
+    print("Optimal splits: ", optimum_splits)
 
     # Instantiate decision tree classifier with min_samples_split hyper parameter
     cls = DecisionTreeClassifier(min_samples_split=optimum_splits)
@@ -262,7 +268,7 @@ def build_SVM_classifier(X_training, y_training):
     optimal_gamma = max(gamam_range_dict, key=gamam_range_dict.get)
     print('optimal gamma', optimal_gamma)
 
-    svm = SVC(gamma=optimal_gamma)
+    svm = SVC(gamma=optimal_gamma, probability=True)
 
     return svm
 
@@ -280,6 +286,48 @@ def visualize_tree(dt, path):
 
     return image
 
+# Generate  metrics
+# @param classifier
+# @param classifier name as string
+# @param test class prediction variable
+def y_pred_class_metrics(classifier, classifier_name, y_pred_class):
+
+    confusion = metrics.confusion_matrix(y_test, y_pred_class)
+
+    print(classifier_name, " - Confusion Matrix  : ", confusion)
+
+    TP = confusion[1, 1]
+    TN = confusion[0, 0]
+    FP = confusion[0, 1]
+    FN = confusion[1, 0]
+
+    print(classifier_name, ' - classification (testing) accuracy', metrics.accuracy_score(y_test, y_pred_class))
+    print(classifier_name, ' - classification error', 1 - metrics.accuracy_score(y_test, y_pred_class))
+    print(classifier_name, ' - sensitivity/recall', metrics.recall_score(y_test, y_pred_class))
+    print(classifier_name, ' - specificity ', TN / float(TN + FP))
+    print(classifier_name, ' - false positive rate ', FP / float(TN + FP))
+    print(classifier_name, ' - Precision ', metrics.precision_score(y_test, y_pred_class))
+
+    print(classifier_name,' - cross val score:', cross_val_score(classifier, X, y, cv=10).mean())
+    print(classifier_name,' - training accuracy:', classifier.score(X_train, y_train))
+
+# Generate AUC Curve
+# @param classifier name as string
+# @param test class probability variable
+def auc_curve(classifier_name, y_pred_prob):
+    fpr, tpr, thresholds = metrics.roc_curve(y_test, y_pred_prob)
+    plt.plot(fpr, tpr)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    title = classifier_name + ' ROC Area Under Curve'
+    plt.title(title)
+    plt.xlabel('False Positive Rate (1 - Specificity)')
+    plt.ylabel('True Positive Rate (Sensitivity)')
+    plt.grid(True)
+    plt.show()
+
+    print(classifier_name, ' - Area Under Curve',
+          metrics.roc_auc_score(y_test, y_pred_prob))
 
 if __name__ == "__main__":
 
@@ -301,17 +349,19 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = ts)
 
 
-
-
     # N A I V E    B A Y E S
 
     # Build the naive bayes classifier
     nb_clf = build_NB_classifier(X_train, y_train)
-    # nb_pred = nb_clf.predict(X_test)
-    # te_acc_score = accuracy_score(y_test, nb_pred)
-    print('Training Accuracy for Naive Bayes:', nb_clf.score(X_train, y_train))
-    print('Test Accuracy for Naive Bayes:', nb_clf.score(X_test, y_test))
+    nb = nb_clf.fit(X_train, y_train)
 
+    # ADDITIONAL METRICS
+    y_pred_class_nb = nb.predict(X_test)
+    y_pred_class_metrics(nb_clf, 'Naive Bayes', y_pred_class_nb)
+
+    # ROC AUC DIAGRAM FOR [Decision Tree]
+    y_pred_prob_nb = nb.predict_proba(X_test)[:, 1]
+    auc_curve('Naive Bayes', y_pred_prob_nb)
 
 
 
@@ -323,10 +373,15 @@ if __name__ == "__main__":
     dt = dt_classifier.fit(X_train, y_train)
     # Visualize the decision tree
     visualize_tree(dt, 'dt.png')
-    # Decision tree - Print training and test scores
-    print("[Decision Tree] - Cross Val score   : ", cross_val_score(dt, X, y, cv=10).mean())
-    print("[Decision Tree] - Training set score: ", dt.score(X_train, y_train))
-    print("[Decision Tree] - Test set score    : ", dt.score(X_test, y_test))
+
+    # ADDITIONAL METRICS
+    y_pred_class_dt = dt.predict(X_test)
+    y_pred_class_metrics(dt, 'Decision Tree', y_pred_class_dt)
+
+    # ROC AUC DIAGRAM FOR [Decision Tree]
+    y_pred_prob_dt = dt.predict_proba(X_test)[:, 1]
+    auc_curve('Decision Tree', y_pred_prob_dt)
+
 
 
 
@@ -337,10 +392,14 @@ if __name__ == "__main__":
     knn_classifier = build_NN_classifier(X, y)
     # train the knn classifier
     knn = knn_classifier.fit(X_train, y_train)
+
     # K-Nearest Neighbors - print training and test scores
-    print("[K-Nearest Neighbors] Cross Val Score   : ", cross_val_score(knn, X, y, cv=10).mean())
-    print("[K-Nearest Neighbors] Training set score: ", knn.score(X_train, y_train))
-    print("[K-Nearest Neighbors] Testing set score: ", knn.score(X_test, y_test))
+    y_pred_class_nn = knn.predict(X_test)
+    y_pred_class_metrics(knn, 'Nearest Neighbor', y_pred_class_nn)
+
+    # ROC AUC DIAGRAM FOR [Nearest Neighbor]
+    y_pred_prob_nn = knn.predict_proba(X_test)[:, 1]
+    auc_curve('Nearest Neighbor', y_pred_prob_nn)
 
 
 
@@ -351,8 +410,11 @@ if __name__ == "__main__":
     svm_classifier = build_SVM_classifier(X, y)
     # train the SVM classifier
     svm = svm_classifier.fit(X_train, y_train)
-    print(svm)
-    # SVM SVC - print training and test scores
-    print("[SVM - SVC] Cross Val Score   : ", cross_val_score(svm, X, y, cv=10).mean())
-    print("[SVM - SVC] Training set score: ", svm.score(X_train, y_train))
-    print("[SVM - SVC] Testing set score : ", svm.score(X_test, y_test))
+
+    # SVM SVC  - print training and test scores
+    y_pred_class_svm = svm.predict(X_test)
+    y_pred_class_metrics(svm, 'Support Vector Machine', y_pred_class_svm)
+
+    # ROC AUC DIAGRAM FOR [Support Vector Machine]
+    y_pred_prob_svm = svm.predict_proba(X_test)[:, 1]
+    auc_curve('Support Vector Machine', y_pred_prob_svm)
