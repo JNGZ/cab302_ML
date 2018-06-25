@@ -4,37 +4,27 @@ import numpy as np
 import pydotplus
 import imageio
 import matplotlib.pyplot as plt
-import operator
 
-from sklearn import *
 from sklearn.naive_bayes import *
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 from sklearn.tree import export_graphviz
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import *
 from sklearn.model_selection import cross_val_score
+from sklearn import metrics
 
-from sklearn.preprocessing import StandardScaler
+
 
 """
 Scaffolding code for the Machine Learning assignment.
-
 You should complete the provided functions and add more functions and classes
 as necessary.
-
 Write a main function that calls the different functions to perform the
 required tasks
 and repeat your experiments.
 """
 
-"""
-Helpful resources
-
-http://scikit-learn.org/stable/tutorial/basic/tutorial.html
-
-loading datasets: http://scikit-learn.org/stable/datasets/index.html
-"""
 
 # GLOBAL PRIORS
 global m_prior
@@ -48,28 +38,27 @@ def my_team():
     """
     return [(9821112, 'Jonathan', 'Gonzalez'), (8850224, 'Rachel', 'Lynch')]
 
-
 def prepare_dataset(dataset_path):
     """
     Read a comma separated text file where
     - the first field is a ID number
     - the second field is a class label 'B' or 'M'
     - the remaining fields are real-valued
-
     Return two numpy arrays X and y where
     - X is two dimensional. X[i,:] is the ith example
     - y is one dimensional. y[i] is the class label of X[i,:]
         y[i] should be set to 1 for 'M', and 0 for 'B'
-
     @param dataset_path: full path of the data set text file
-
     @return: X,y
     """
 
     data_input = open(dataset_path, 'rt')
+
     reader = csv.reader(data_input)
+
     # index where classification 'M' or 'B' is located in the data row
     tumor_index = 1
+
     array = []
 
     # iterate reader and append each line from the data set to the empty
@@ -102,22 +91,20 @@ def prepare_dataset(dataset_path):
 
     return X, y
 
-
 def build_NB_classifier(X_training, y_training):
     """
     Build a Naive Bayes classifier based on the training set X_training,
     y_training.
-
     @param X_training, y_training:
     X_training[i,:] is the ith example
     y_training: y_training[i] is the class label of X_training[i,:]
-
     @return clf : the classifier built in this function
     """
-    clf = GaussianNB(priors=[b_prior, m_prior])    # GaussianNB used in classification
+    print('B priori', b_prior)
+    print('M priori', m_prior)
+    clf = GaussianNB(priors=[b_prior, m_prior])   # GaussianNB used in classification
     clf.fit(X_training, y_training)     # Find the best Gaussian fit of the data
     return clf
-
 
 def build_DT_classifier(X_training, y_training):
     """
@@ -158,24 +145,25 @@ def build_DT_classifier(X_training, y_training):
 
     # Create a plot to visualize the hyper parameter performance
     plt.plot(min_split_range, split_scores)
+    plt.title('Decision Tree - Hyper Parameter Cross Validation')
     plt.xlabel('Split Value for DTree')
     plt.ylabel('Cross Validation Accuracy')
     plt.grid(b=True)
     plt.show()
 
-    # Get the highest accuracy score
-    max_split = max(split_scores)
-    print('Peak accuracy value: ', max_split)
+    # Get optimal number of splits
+    optimum_splits = max(min_smpl_splt_dict, key=min_smpl_splt_dict.get)
 
-    # Get max value for hidden layers
-    maximum = max(min_smpl_splt_dict, key=min_smpl_splt_dict.get)
-    print('Optimal split value: ', maximum)
+    # print the standard deviation of validation score
+    numpy_scores = np.array(split_scores)
+    val_acc_std_dev = numpy_scores.std()
+    print("Standard Deviation: ", numpy_scores.std())
+    print("Optimal splits: ", optimum_splits)
 
     # Instantiate decision tree classifier with min_samples_split hyper parameter
-    cls = DecisionTreeClassifier(min_samples_split=maximum)
+    cls = DecisionTreeClassifier(min_samples_split=optimum_splits)
 
     return cls
-
 
 def build_NN_classifier(X_training, y_training):
     """
@@ -189,51 +177,47 @@ def build_NN_classifier(X_training, y_training):
     @return
     clf : the classifier built in this function
     """
+    #  C R O S S    V A L I D A T I O N
 
-    #  H Y P E R   P A R A M E T E R   C R O S S    V A L I D A T I O N
-
-    # list of hyper parameters to test
-    hidden_layer_range = list(range(100,200))
+    # Hyper parameter range 1 - 50
+    neighbors_range = list(range(1, 50))
 
     # List of cross validation scores
     split_scores = []
 
-    # dictionary
-    layer_dict = {}
+    # Neighbors dict.
+    neighbors_dict = {}
 
-    # loop over list of hyper parameters and perform cross validation
-    for layer in hidden_layer_range:
-        test_nn = MLPClassifier(hidden_layer_sizes=layer)
+    # Loop through the hyper parameter range and apply the parameter value to
+    # the classifier
+    for neighbor in neighbors_range:
+        test_knn = KNeighborsClassifier(n_neighbors=neighbor)
         # perform cross validation using 10 k folds and score on base on accuracy
-        scores = cross_val_score(test_nn, X_training, y_training, cv=10, scoring='accuracy')
+        scores = cross_val_score(test_knn, X_training, y_training, cv=10,scoring='accuracy')
         # get the mean score from cross val test
         split_scores.append(scores.mean())
-        # add number of layers and mean score to layer dictionary
-        layer_dict.update({layer:scores.mean()})
+        # add the mean split value and mean score to the dictionary
+        neighbors_dict.update({neighbor: scores.mean()})
+
+    # Get highest scoring value from the dictionary
+    optimal_neighbors = max(neighbors_dict, key=neighbors_dict.get)
+    print('Optimal Neighbors: ', optimal_neighbors)
 
 
 
     #  P L O T T I N G
 
     # Create a plot to visualize the hyper parameter performance
-    plt.plot(hidden_layer_range, split_scores)
-    plt.xlabel('Number Of Hidden Layer')
-    plt.ylabel('Cross Validation Accuracy')
+    plt.plot(neighbors_range, split_scores)
+    plt.title('K Nearest Neighbors - Hyper Parameter Cross Validation')
+    plt.xlabel('Number of Neighbors')
+    plt.ylabel('Cross Validation Score - Accuracy')
     plt.grid(b=True)
     plt.show()
 
-    # Get max optimal value of hidden layers from the dictionary
-    maximum = max(layer_dict, key=layer_dict.get)
-
-    # create instance of multi layer perceptron neural net and pass it the
-    # optimal hidden layers value
-    nn = MLPClassifier(hidden_layer_sizes=maximum)
-
-    print("[Neural Net] Validation set score: %", max(split_scores))
-
-    return nn
-
-
+    # create instance of knn with optimal parameter
+    knn = KNeighborsClassifier(n_neighbors=optimal_neighbors)
+    return knn
 
 def build_SVM_classifier(X_training, y_training):
     """
@@ -247,9 +231,47 @@ def build_SVM_classifier(X_training, y_training):
     @return
     clf : the classifier built in this function
     """
+    #  C R O S S    V A L I D A T I O N
 
-    raise NotImplementedError()
+    # Hyper parameter Gamma range 1.e-10 - 1.e-2
+    gamma_range = np.logspace(-10, -2)
 
+    # List of cross validation scores
+    split_scores = []
+
+    # dictionary
+    gamam_range_dict = {}
+
+    # Loop through the hyper parameter range and apply the parameter value to
+    # the decision tree classifier
+    for gamma in gamma_range:
+        test_svm = SVC(gamma=gamma)
+        # perform cross validation using 10 k folds and score on base on
+        # accuracy
+        scores = cross_val_score(test_svm, X_training, y_training, cv=10,
+                                 scoring='accuracy')
+        # get the mean score from cross val test
+        split_scores.append(scores.mean())
+        # add the mean split value and mean score to the dictionary
+        gamam_range_dict.update({gamma: scores.mean()})
+
+    # Create a plot to visualize the hyper parameter performance
+    plt.plot(gamma_range, split_scores)
+    plt.title('SVM - Hyper Parameter Cross Validation')
+    plt.xlabel('Gamma value')
+    plt.ylabel('Cross Validation Accuracy')
+    plt.grid(b=True)
+    plt.show()
+
+    # Get optimal number of splits
+    optimal_gamma = max(gamam_range_dict, key=gamam_range_dict.get)
+    print('optimal gamma', optimal_gamma)
+
+    svm = SVC(gamma=optimal_gamma, probability=True)
+
+    return svm
+
+    # raise NotImplementedError()
 
 def visualize_tree(dt, path):
 
@@ -263,12 +285,58 @@ def visualize_tree(dt, path):
 
     return image
 
+# Generate  metrics
+# @param classifier
+# @param classifier name as string
+# @param test class prediction variable
+def y_pred_class_metrics(classifier, classifier_name, y_pred_class):
+
+    confusion = metrics.confusion_matrix(y_test, y_pred_class)
+
+    print(classifier_name, " - Confusion Matrix  : ", confusion)
+
+    TP = confusion[1, 1]
+    TN = confusion[0, 0]
+    FP = confusion[0, 1]
+    FN = confusion[1, 0]
+
+    print(classifier_name, ' - classification (testing) accuracy', metrics.accuracy_score(y_test, y_pred_class))
+    print(classifier_name, ' - classification error', 1 - metrics.accuracy_score(y_test, y_pred_class))
+    print(classifier_name, ' - sensitivity/recall', metrics.recall_score(y_test, y_pred_class))
+    print(classifier_name, ' - specificity ', TN / float(TN + FP))
+    print(classifier_name, ' - false positive rate ', FP / float(TN + FP))
+    print(classifier_name, ' - Precision ', metrics.precision_score(y_test, y_pred_class))
+
+    print(classifier_name,' - cross val score:', cross_val_score(classifier, X, y, cv=10).mean())
+    print(classifier_name, ' - cross val error:',
+          1- cross_val_score(classifier, X, y, cv=10).mean())
+    print(classifier_name,' - training accuracy:', classifier.score(X_train, y_train))
+    print(classifier_name, ' - training error:',
+          1- classifier.score(X_train, y_train))
+
+# Generate AUC Curve
+# @param classifier name as string
+# @param test class probability variable
+def auc_curve(classifier_name, y_pred_prob):
+    fpr, tpr, thresholds = metrics.roc_curve(y_test, y_pred_prob)
+    plt.plot(fpr, tpr)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    title = classifier_name + ' ROC Area Under Curve'
+    plt.title(title)
+    plt.xlabel('False Positive Rate (1 - Specificity)')
+    plt.ylabel('True Positive Rate (Sensitivity)')
+    plt.grid(True)
+    plt.show()
+
+    print(classifier_name, ' - Area Under Curve',
+          metrics.roc_auc_score(y_test, y_pred_prob))
 
 if __name__ == "__main__":
 
     print(my_team())
 
-    # Prepare and format the raw data
+    # Generate numpy arrays of data
     X, y = prepare_dataset('medical_records.data')
 
     # Calculate the priors from the whole dataset based on the proportion of benign and malignant data
@@ -283,51 +351,85 @@ if __name__ == "__main__":
     # Split the data into Test and Training Sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = ts)
 
-    # # instantiate the decision tree classifier
-    # dt_classifier = build_DT_classifier(X, y)
-    # # Training the classifier
-    # dt = dt_classifier.fit(X_train, y_train)
-    # # Visualize the decision tree
-    # visualize_tree(dt, 'dt.png')
-    #
-    # # Decision tree cross validation accuracy
-    # validation_scores = cross_val_score(dt, X, y, cv=10, scoring='accuracy')
-    # val_score_mean = validation_scores.mean()
-    # print('Validation accuracy: ', val_score_mean)
-    #
-    # # Get standard deviation of validation accuracy
-    # numpy_scores = np.array(validation_scores)
-    # val_acc_std_dev = numpy_scores.std()
-    # print('Standard deviation of validation using 190 hyper parameter', val_acc_std_dev)
-    #
-    # # Decision tree prediction on training set
-    # dt_pred = dt.predict(X_train)
-    # # Accuracy score for prediction
-    # prediction_score = accuracy_score(y_train, dt_pred)
-    # print('Training accuracy: ', prediction_score)
-    #
-    # # Decision tree prediction on test set
-    # dt_pred = dt.predict(X_test)
-    # # Accuracy score for prediction
-    # prediction_score = accuracy_score(y_test, dt_pred)
-    # print('Test accuracy: ', prediction_score)
 
-    # Build the naive bayers classifier
+    # N A I V E    B A Y E S
+
+    # Build the naive bayes classifier
     nb_clf = build_NB_classifier(X_train, y_train)
-    # nb_pred = nb_clf.predict(X_test)
-    # te_acc_score = accuracy_score(y_test, nb_pred)
-    print('Training Accuracy for Naive Bayers:', nb_clf.score(X_train, y_train))
-    print('Test Accuracy for Naive Bayers:', nb_clf.score(X_test, y_test))
+    nb = nb_clf.fit(X_train, y_train)
 
-    # instantiate the neural net classifier with optimal hyper parameter
-    nn_classifier = build_NN_classifier(X, y)
-    # train the neural net
-    nn = nn_classifier.fit(X_train, y_train)
-    # print training and test scores
-    print("[Neural Net] Training set score: %", nn.score(X_train, y_train))
-    print("[Neural Net] Test set score: %", nn.score(X_test, y_test))
+    # ADDITIONAL METRICS
+    y_pred_class_nb = nb.predict(X_test)
+    # Parameters: classifier, name of classifier and prediction results variable
+    y_pred_class_metrics(nb_clf, 'Naive Bayes', y_pred_class_nb)
 
-
+    # ROC AUC DIAGRAM FOR [Decision Tree]
+    # prediction probablity variable
+    y_pred_prob_nb = nb.predict_proba(X_test)[:, 1]
+    # Generate roc auc graph - pass classifier name and prediction probablity variable
+    auc_curve('Naive Bayes', y_pred_prob_nb)
 
 
 
+    # D E C I S I O N   T R E E
+
+    # instantiate the decision tree classifier
+    dt_classifier = build_DT_classifier(X, y)
+    # Training the classifier
+    dt = dt_classifier.fit(X_train, y_train)
+    # Visualize the decision tree
+    visualize_tree(dt, 'dt.png')
+
+    # ADDITIONAL METRICS
+    y_pred_class_dt = dt.predict(X_test)
+    # Parameters: classifier, name of classifier and prediction results variable
+    y_pred_class_metrics(dt, 'Decision Tree', y_pred_class_dt)
+
+    # ROC AUC DIAGRAM FOR [Decision Tree]
+    # prediction probablity variable
+    y_pred_prob_dt = dt.predict_proba(X_test)[:, 1]
+    # Generate roc auc graph - pass classifier name and prediction probablity variable
+    auc_curve('Decision Tree', y_pred_prob_dt)
+
+
+
+
+
+    # K   N E A R E S T   N E I G H B O R S
+
+    # instantiate the knn classifier
+    knn_classifier = build_NN_classifier(X, y)
+    # train the knn classifier
+    knn = knn_classifier.fit(X_train, y_train)
+
+    # K-Nearest Neighbors - print training and test scores
+    y_pred_class_nn = knn.predict(X_test)
+    # Parameters: classifier, name of classifier and prediction results variable
+    y_pred_class_metrics(knn, 'Nearest Neighbor', y_pred_class_nn)
+
+    # ROC AUC DIAGRAM FOR [Nearest Neighbor]
+    # prediction probablity variable
+    y_pred_prob_nn = knn.predict_proba(X_test)[:, 1]
+    # Generate roc auc graph - pass classifier name and prediction probablity variable
+    auc_curve('Nearest Neighbor', y_pred_prob_nn)
+
+
+
+
+    # S V M    C L A S S I F I E R
+
+    # instantiate the svm classifier
+    svm_classifier = build_SVM_classifier(X, y)
+    # train the SVM classifier
+    svm = svm_classifier.fit(X_train, y_train)
+
+    # SVM SVC  - print training and test scores
+    y_pred_class_svm = svm.predict(X_test)
+    # Parameters: classifier, name of classifier and prediction results variable
+    y_pred_class_metrics(svm, 'Support Vector Machine', y_pred_class_svm)
+
+    # ROC AUC DIAGRAM FOR [Support Vector Machine]
+    # prediction probablity variable
+    y_pred_prob_svm = svm.predict_proba(X_test)[:, 1]
+    # Generate roc auc graph - pass classifier name and prediction probablity variable
+    auc_curve('Support Vector Machine', y_pred_prob_svm)
